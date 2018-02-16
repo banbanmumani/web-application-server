@@ -25,7 +25,6 @@ public class RequestHandler extends Thread {
             int i = 0;
             StringBuffer sb = new StringBuffer();
 
-            log.debug("read request...");
             String line = null;
             BufferedReader reader = new BufferedReader(new InputStreamReader(in));
             do {
@@ -35,21 +34,25 @@ public class RequestHandler extends Thread {
                     break;
             } while (!"".equals(line));
 
-            log.debug("read request finish");
-
             String request = sb.toString();
             String[] reqArr = request.split("\r\n");
+
+            if (reqArr.length < 0)
+                return;
 
             String[] header = reqArr[0].split(" ");
 
             String method = header[0];
             String path = header[1];
             String protocol = header[2];
+            String accept = reqArr[2];
+
+            log.debug(method + " " + path);
 
             byte[] body = null;
 
-            if ("/index.html".equals(path)) {
-                File file = new File("./webapp/index.html");
+            if (path != null) {
+                File file = new File("./webapp" + path);
                 Scanner scanner = new Scanner(file);
                 StringBuffer html = new StringBuffer();
                 while (scanner.hasNext()) {
@@ -57,7 +60,7 @@ public class RequestHandler extends Thread {
                 }
                 body = html.toString().getBytes();
                 DataOutputStream dos = new DataOutputStream(out);
-                response200Header(dos, body.length);
+                response200Header(dos, body.length, accept);
                 responseBody(dos, body);
             }
 
@@ -66,10 +69,14 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
+    private void response200Header(DataOutputStream dos, int lengthOfBodyContent, String accept) {
         try {
+            String contentType = "text/html";
+            if (accept.indexOf("text/css") != -1) {
+                contentType = "text/css";
+            }
             dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
+            dos.writeBytes("Content-Type: " + contentType + ";charset=utf-8\r\n");
             dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
             dos.writeBytes("\r\n");
         } catch (IOException e) {
